@@ -8,23 +8,42 @@ Comprehensive tool to check AMI usage using both AWS Usage Reports and Reference
 - **Reference Check**: Audit in-account resource references
 - **Recommendations**: Identify safe-to-delete AMIs
 - **CSV Export**: Detailed report for analysis
+- **Lambda Support**: Deploy as serverless function with cross-account capability
 
-## Requirements
+## Deployment Options
 
+### Option 1: CLI Tool (Local Execution)
+
+**Requirements:**
 - Python 3.x with boto3
-- AWS CLI v2 (for manual checks)
+- AWS CLI v2
 - Appropriate IAM permissions
 
-## Usage
-
+**Usage:**
 ```bash
 # Check specific region
 /path/to/venv/bin/python3 ami_checker.py <region>
 
 # Examples
-/home/ubuntu/venv_ami/bin/python3 ami_checker.py cn-north-1
-/home/ubuntu/venv_ami/bin/python3 ami_checker.py cn-northwest-1
+python3 ami_checker.py us-east-1
+python3 ami_checker.py cn-north-1
 ```
+
+### Option 2: Lambda Function (Serverless)
+
+**Features:**
+- Cross-account AMI checking via AssumeRole
+- Scheduled execution support
+- JSON output for automation
+- Cost-effective (~$1/month for 10 accounts)
+
+**Quick Deploy:**
+```bash
+sam build
+sam deploy --guided
+```
+
+**See [LAMBDA_DEPLOYMENT.md](LAMBDA_DEPLOYMENT.md) for detailed instructions.**
 
 ## Understanding the Results
 
