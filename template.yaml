@@ -15,6 +15,37 @@ Globals:
     Runtime: python3.12
 
 Resources:
+  AMICheckerFunctionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - !Sub 'arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole'
+      Policies:
+        - PolicyName: AMICheckerPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - ec2:DescribeImages
+                  - ec2:CreateImageUsageReport
+                  - ec2:DescribeImageUsageReports
+                  - ec2:DescribeImageUsageReportEntries
+                  - ec2:DescribeImageReferences
+                Resource: '*'
+              - Effect: Allow
+                Action:
+                  - sts:AssumeRole
+                Resource:
+                  - !Sub 'arn:${AWS::Partition}:iam::*:role/${AssumeRoleName}'
+
   AMICheckerFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -22,28 +53,10 @@ Resources:
       CodeUri: .
       Handler: lambda_function.lambda_handler
       Description: Check AMI usage across accounts
+      Role: !GetAtt AMICheckerFunctionRole.Arn
       Environment:
         Variables:
           ASSUME_ROLE_NAME: !Ref AssumeRoleName
-      Policies:
-        - Version: '2012-10-17'
-          Statement:
-            # Same account permissions
-            - Effect: Allow
-              Action:
-                - ec2:DescribeImages
-                - ec2:CreateImageUsageReport
-                - ec2:DescribeImageUsageReports
-                - ec2:DescribeImageUsageReportEntries
-                - ec2:DescribeImageReferences
-              Resource: '*'
-            # Cross-account assume role
-            - Effect: Allow
-              Action:
-                - sts:AssumeRole
-              Resource:
-                - !Sub 'arn:aws-cn:iam::*:role/${AssumeRoleName}'
-                - !Sub 'arn:aws:iam::*:role/${AssumeRoleName}'
       Events:
         ScheduledCheck:
           Type: Schedule
