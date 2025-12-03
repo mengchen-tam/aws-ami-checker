@@ -41,7 +41,9 @@ Resources:
             - Effect: Allow
               Action:
                 - sts:AssumeRole
-              Resource: !Sub 'arn:${AWS::Partition}:iam::*:role/${AssumeRoleName}'
+              Resource:
+                - !Sub 'arn:aws-cn:iam::*:role/${AssumeRoleName}'
+                - !Sub 'arn:aws:iam::*:role/${AssumeRoleName}'
       Events:
         ScheduledCheck:
           Type: Schedule

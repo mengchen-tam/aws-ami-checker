@@ -24,7 +24,9 @@ Resources:
         Statement:
           - Effect: Allow
             Principal:
-              AWS: !Sub 'arn:${AWS::Partition}:iam::${TrustedAccountId}:root'
+              AWS:
+                - !Sub 'arn:aws-cn:iam::${TrustedAccountId}:root'
+                - !Sub 'arn:aws:iam::${TrustedAccountId}:root'
             Action: sts:AssumeRole
             Condition:
               StringEquals:

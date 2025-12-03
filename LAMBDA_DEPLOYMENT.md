@@ -33,11 +33,13 @@ Deploy AMI Usage Checker as a Lambda function with cross-account support.
 - AWS SAM CLI installed
 - Python 3.12
 - AWS credentials configured
+- **For China regions**: Ensure you're using AWS China account
 
 ## Deployment Steps
 
 ### 1. Deploy Lambda Function (Account A)
 
+**For AWS China (Beijing/Ningxia):**
 ```bash
 # Build and deploy
 sam build
@@ -45,10 +47,16 @@ sam deploy --guided
 
 # Follow prompts:
 # - Stack Name: ami-checker
-# - AWS Region: us-east-1
+# - AWS Region: cn-northwest-1 (or cn-north-1)
 # - AssumeRoleName: AMICheckerRole
 # - Confirm changes: Y
 # - Allow SAM CLI IAM role creation: Y
+```
+
+**For AWS Global:**
+```bash
+sam deploy --guided
+# Use regions like us-east-1, eu-west-1, etc.
 ```
 
 **Note the Lambda function's AWS Account ID from the output.**
@@ -57,6 +65,19 @@ sam deploy --guided
 
 Deploy this in each target account you want to check:
 
+**For AWS China:**
+```bash
+aws cloudformation deploy \
+  --template-file cross-account-role.yaml \
+  --stack-name ami-checker-role \
+  --parameter-overrides \
+      TrustedAccountId=<LAMBDA_ACCOUNT_ID> \
+      RoleName=AMICheckerRole \
+  --capabilities CAPABILITY_NAMED_IAM \
+  --region cn-northwest-1
+```
+
+**For AWS Global:**
 ```bash
 aws cloudformation deploy \
   --template-file cross-account-role.yaml \
@@ -74,6 +95,20 @@ Replace `<LAMBDA_ACCOUNT_ID>` with Account A's ID.
 
 ### Same Account Check
 
+**AWS China:**
+```bash
+aws lambda invoke \
+  --function-name AMIUsageChecker \
+  --payload '{
+    "region": "cn-northwest-1",
+    "check_types": ["usage", "reference"]
+  }' \
+  response.json
+
+cat response.json | jq .
+```
+
+**AWS Global:**
 ```bash
 aws lambda invoke \
   --function-name AMIUsageChecker \
@@ -82,40 +117,56 @@ aws lambda invoke \
     "check_types": ["usage", "reference"]
   }' \
   response.json
-
-cat response.json | jq .
 ```
 
 ### Cross-Account Check
 
+**AWS China:**
 ```bash
 aws lambda invoke \
   --function-name AMIUsageChecker \
   --payload '{
-    "region": "us-east-1",
+    "region": "cn-north-1",
     "target_account_id": "123456789012",
     "assume_role_name": "AMICheckerRole",
     "check_types": ["usage", "reference"]
   }' \
   response.json
-
-cat response.json | jq .
 ```
 
 ### Check Multiple Accounts
 
+**AWS China:**
 ```bash
 #!/bin/bash
 ACCOUNTS=("123456789012" "234567890123" "345678901234")
+REGION="cn-northwest-1"
 
 for account in "${ACCOUNTS[@]}"; do
   echo "Checking account: $account"
   aws lambda invoke \
     --function-name AMIUsageChecker \
     --payload "{
-      \"region\": \"us-east-1\",
+      \"region\": \"$REGION\",
       \"target_account_id\": \"$account\",
       \"assume_role_name\": \"AMICheckerRole\"
+    }" \
+    "response_${account}.json"
+done
+```
+
+**AWS Global:**
+```bash
+#!/bin/bash
+ACCOUNTS=("123456789012" "234567890123")
+REGION="us-east-1"
+
+for account in "${ACCOUNTS[@]}"; do
+  aws lambda invoke \
+    --function-name AMIUsageChecker \
+    --payload "{
+      \"region\": \"$REGION\",
+      \"target_account_id\": \"$account\"
     }" \
     "response_${account}.json"
 done
@@ -125,12 +176,16 @@ done
 
 ```json
 {
-  "region": "us-east-1",              // Required: AWS region to check
+  "region": "cn-northwest-1",         // Required: AWS region (cn-north-1, cn-northwest-1, us-east-1, etc.)
   "target_account_id": "123456789012", // Optional: for cross-account
   "assume_role_name": "AMICheckerRole", // Optional: role name in target account
   "check_types": ["usage", "reference"] // Optional: default both
 }
 ```
+
+**Supported Regions:**
+- AWS China: `cn-north-1` (Beijing), `cn-northwest-1` (Ningxia)
+- AWS Global: `us-east-1`, `us-west-2`, `eu-west-1`, `ap-southeast-1`, etc.
 
 ## Response Structure
 
@@ -138,7 +193,7 @@ done
 {
   "statusCode": 200,
   "body": {
-    "region": "us-east-1",
+    "region": "cn-northwest-1",
     "target_account": "123456789012",
     "timestamp": "2025-12-03T07:00:00",
     "usage_reports": [

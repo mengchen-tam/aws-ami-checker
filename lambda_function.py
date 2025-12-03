@@ -9,12 +9,15 @@ import os
 from datetime import datetime
 from collections import defaultdict
 
-def get_session(account_id=None, role_name=None, region='us-east-1'):
+def get_session(account_id=None, role_name=None, region='cn-northwest-1'):
     """Get boto3 session for target account"""
     if account_id and role_name:
         # Cross-account access
-        sts = boto3.client('sts')
-        role_arn = f"arn:aws:iam::{account_id}:role/{role_name}"
+        sts = boto3.client('sts', region_name=region)
+        
+        # Determine partition based on region
+        partition = 'aws-cn' if region.startswith('cn-') else 'aws'
+        role_arn = f"arn:{partition}:iam::{account_id}:role/{role_name}"
         
         response = sts.assume_role(
             RoleArn=role_arn,
@@ -148,7 +151,7 @@ def lambda_handler(event, context):
     
     Event structure:
     {
-        "region": "us-east-1",              # Required
+        "region": "cn-northwest-1",         # Required
         "target_account_id": "123456789012", # Optional for cross-account
         "assume_role_name": "AMICheckerRole", # Optional for cross-account
         "check_types": ["usage", "reference"] # Optional, default both
@@ -156,7 +159,7 @@ def lambda_handler(event, context):
     """
     
     # Parse input
-    region = event.get('region', os.environ.get('AWS_REGION', 'us-east-1'))
+    region = event.get('region', os.environ.get('AWS_REGION', 'cn-northwest-1'))
     target_account = event.get('target_account_id')
     role_name = event.get('assume_role_name', os.environ.get('ASSUME_ROLE_NAME'))
     check_types = event.get('check_types', ['usage', 'reference'])
